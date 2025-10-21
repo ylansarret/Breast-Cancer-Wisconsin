@@ -3,3 +3,8 @@ pandas
 numpy 
 matplotlib.pyplot 
 seaborn 
+sklearn.datasets import load_breast_cancer
+sklearn.preprocessing import StandardScaler
+sklearn.linear_model import LogisticRegression
+sklearn.ensemble import RandomForestClassifier
+sklearn.decomposition import PCA
