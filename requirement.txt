@@ -1,8 +1,8 @@
-streamlit
-pandas
-scikit-learn
-matplotlib
-seaborn
+streamlit 
+pandas 
+numpy 
+matplotlib.pyplot 
+seaborn 
 load_breast_cancer
 StandardScaler
 LogisticRegression
