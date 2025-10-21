@@ -1,6 +1,8 @@
 streamlit
-pandas 
-numpy 
+pandas
+numpy
+seaborn
+scikit-learn
 matplotlib.pyplot 
 seaborn 
 load_breast_cancer
