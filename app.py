@@ -1,3 +1,8 @@
+# ======================
+# Projet Data Science - Cancer du sein
+# Streamlit App interactive
+# ======================
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -46,7 +51,7 @@ rf.fit(X_scaled, y)
 # ======================
 st.sidebar.header("🌡️ Réglez les conditions atmosphériques biologiques")
 
-features_to_use = X.columns[:10]
+features_to_use = X.columns[:10]  # Premieres 10 features pour l'interface
 user_input = {}
 
 for feature in features_to_use:
@@ -143,3 +148,4 @@ else:
     st.success("☀️ **Ciel dégagé** – conditions bénignes confirmées.")
 
 st.caption("Projet éducatif — Ne remplace pas un diagnostic médical. Réalisé avec ❤️ en Python, scikit-learn et Streamlit.")
+
