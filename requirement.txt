@@ -1,10 +1,15 @@
-streamlit 
+streamlit
 pandas 
 numpy 
 matplotlib.pyplot 
 seaborn 
 load_breast_cancer
 StandardScaler
+SimpleImputer
+Pipeline
 LogisticRegression
 RandomForestClassifier
+train_test_split, GridSearchCV, StratifiedKFold
+accuracy_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay, roc_auc_score, RocCurveDisplay
 PCA
+warnings
