@@ -1,6 +1,5 @@
 # ======================
-# Projet Data Science - Cancer du sein
-# Streamlit App interactive
+# Streamlit - Visualisation Cancer du Sein
 # ======================
 
 import streamlit as st
@@ -10,142 +9,125 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.datasets import load_breast_cancer
 from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
+from sklearn.metrics import accuracy_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay, roc_auc_score, RocCurveDisplay
 from sklearn.decomposition import PCA
+import warnings
+warnings.filterwarnings('ignore')
+
+st.set_page_config(page_title="Visualisation Cancer du Sein", layout="wide")
+
+st.title("📊 Visualisation du dataset Breast Cancer Wisconsin")
+st.markdown("Explorez les données, la corrélation, les modèles et la PCA.")
 
 # ======================
-# ☀️ CONFIGURATION GÉNÉRALE
-# ======================
-st.set_page_config(page_title="Météo du Cancer du Sein", page_icon="🌦️", layout="wide")
-
-st.title("🌦️ Météo du Cancer du Sein")
-st.markdown("""
-Bienvenue sur **DataMétéo Santé**, la première station météo cellulaire !  
-Notre mission : prédire si le climat biologique est **ensoleillé (bénin)** ☀️  
-ou s’il risque de virer à la **tempête (malin)** 🌪️  
-""")
-
-# ======================
-# 📊 CHARGEMENT DES DONNÉES
+# Chargement des données
 # ======================
 data = load_breast_cancer()
 X = pd.DataFrame(data.data, columns=data.feature_names)
-y = data.target
+y = pd.Series(data.target, name='target')
 
-# Normalisation
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+st.sidebar.header("⚙️ Options")
+show_data = st.sidebar.checkbox("Afficher les premières lignes du dataset", value=True)
+show_corr = st.sidebar.checkbox("Afficher la matrice de corrélation")
+show_models = st.sidebar.checkbox("Afficher les performances modèles")
+show_feat_imp = st.sidebar.checkbox("Afficher importance variables")
+show_pca = st.sidebar.checkbox("Afficher PCA 2D")
 
-# ======================
-# 🧠 ENTRAÎNEMENT DES MODÈLES MÉTÉO
-# ======================
-lr = LogisticRegression(max_iter=500)
-rf = RandomForestClassifier(n_estimators=200, random_state=42)
+# Affichage du dataset
+if show_data:
+    st.subheader("✅ Aperçu des données")
+    st.dataframe(X.head())
+    st.write("Dimensions :", X.shape)
+    st.write("Répartition des classes : ", y.value_counts().to_dict())
 
-lr.fit(X_scaled, y)
-rf.fit(X_scaled, y)
-
-# ======================
-# 🎛️ INTERFACE UTILISATEUR
-# ======================
-st.sidebar.header("🌡️ Réglez les conditions atmosphériques biologiques")
-
-features_to_use = X.columns[:10]  # Premieres 10 features pour l'interface
-user_input = {}
-
-for feature in features_to_use:
-    val_min = float(X[feature].min())
-    val_max = float(X[feature].max())
-    val_mean = float(X[feature].mean())
-    user_input[feature] = st.sidebar.slider(f"{feature}", val_min, val_max, val_mean)
-
-input_df = pd.DataFrame([user_input])
-input_scaled = scaler.transform(input_df)
+# Corrélation
+if show_corr:
+    st.subheader("📈 Matrice de corrélation")
+    fig, ax = plt.subplots(figsize=(12,10))
+    sns.heatmap(X.corr(), cmap='coolwarm', center=0, linewidths=0, ax=ax)
+    st.pyplot(fig)
 
 # ======================
-# 📈 PREDICTIONS
+# Split + modèles
 # ======================
-pred_lr = lr.predict(input_scaled)[0]
-pred_rf = rf.predict(input_scaled)[0]
-proba_lr = lr.predict_proba(input_scaled)[0][1]
-proba_rf = rf.predict_proba(input_scaled)[0][1]
-
-# ======================
-# 🌤️ AFFICHAGE DES PRÉVISIONS
-# ======================
-st.markdown("---")
-st.subheader("🧭 Prévisions du jour")
-
-col1, col2 = st.columns(2)
-
-def get_weather_emoji(prob):
-    if prob < 0.4:
-        return "☀️"
-    elif prob < 0.7:
-        return "⛅️"
-    else:
-        return "🌪️"
-
-with col1:
-    emoji_lr = get_weather_emoji(proba_lr)
-    st.markdown("### 👨‍🔬 Modèle : Régression Logistique")
-    st.metric("Prévision du climat cellulaire", f"{emoji_lr} Risque : {int(proba_lr*100)} %")
-    st.progress(int(proba_lr*100))
-    st.caption("Modèle linéaire — prévision rapide et stable.")
-
-with col2:
-    emoji_rf = get_weather_emoji(proba_rf)
-    st.markdown("### 🌲 Modèle : Forêt Aléatoire")
-    st.metric("Prévision du climat cellulaire", f"{emoji_rf} Risque : {int(proba_rf*100)} %")
-    st.progress(int(proba_rf*100))
-    st.caption("Modèle non linéaire — prévision détaillée et robuste.")
-
-# ======================
-# ☁️ VISUELS INTERACTIFS
-# ======================
-st.markdown("---")
-st.subheader("📊 Cartes météorologiques des cellules")
-
-viz_choice = st.radio(
-    "Choisissez la carte météo à afficher :",
-    ("Carte des corrélations", "Carte PCA 2D", "Carte d’importance des variables")
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
 )
 
-if viz_choice == "Carte des corrélations":
-    fig, ax = plt.subplots(figsize=(10, 8))
-    sns.heatmap(X.corr(), cmap="coolwarm", ax=ax)
-    ax.set_title("Carte des corrélations entre variables")
+imputer = SimpleImputer(strategy='median')
+scaler = StandardScaler()
+
+pipe_lr = Pipeline([
+    ('imp', imputer),
+    ('sc', scaler),
+    ('clf', LogisticRegression(max_iter=5000, random_state=42))
+])
+
+pipe_rf = Pipeline([
+    ('imp', imputer),
+    ('sc', scaler),
+    ('clf', RandomForestClassifier(random_state=42))
+])
+
+grid_lr = {'clf__C': [0.01, 0.1, 1, 10]}
+grid_rf = {'clf__n_estimators': [100, 200], 'clf__max_depth': [None, 5, 10]}
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+gs_lr = GridSearchCV(pipe_lr, grid_lr, cv=cv, scoring='roc_auc', n_jobs=-1)
+gs_lr.fit(X_train, y_train)
+
+gs_rf = GridSearchCV(pipe_rf, grid_rf, cv=cv, scoring='roc_auc', n_jobs=-1)
+gs_rf.fit(X_train, y_train)
+
+# ======================
+# Évaluation
+# ======================
+def eval_model(model, X_test, y_test, name):
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:,1]
+    acc = accuracy_score(y_test, y_pred)
+    rec = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    auc = roc_auc_score(y_test, y_prob)
+    return {'model': name, 'Accuracy': acc, 'Recall': rec, 'F1': f1, 'AUC': auc}
+
+res_lr = eval_model(gs_lr.best_estimator_, X_test, y_test, "Logistic Regression")
+res_rf = eval_model(gs_rf.best_estimator_, X_test, y_test, "Random Forest")
+
+df_res = pd.DataFrame([res_lr, res_rf]).set_index('model')
+
+if show_models:
+    st.subheader("🤖 Performances des modèles")
+    st.table(df_res)
+
+# ======================
+# Importance variables
+# ======================
+if show_feat_imp:
+    st.subheader("🌟 Top 10 variables importantes (Random Forest)")
+    feat_imp = pd.Series(gs_rf.best_estimator_['clf'].feature_importances_, index=X.columns).sort_values(ascending=False)[:10]
+    fig, ax = plt.subplots(figsize=(8,5))
+    sns.barplot(x=feat_imp.values, y=feat_imp.index, color='royalblue', ax=ax)
+    ax.set_xlabel("Importance moyenne")
     st.pyplot(fig)
 
-elif viz_choice == "Carte PCA 2D":
+# ======================
+# PCA
+# ======================
+if show_pca:
+    st.subheader("🔹 PCA - Projection 2D des données")
+    X_scaled = scaler.fit_transform(imputer.fit_transform(X))
     pca = PCA(n_components=2)
     proj = pca.fit_transform(X_scaled)
-    fig, ax = plt.subplots()
-    scatter = ax.scatter(proj[:, 0], proj[:, 1], c=y, cmap='coolwarm', alpha=0.7)
-    ax.set_xlabel("Axe météo 1")
-    ax.set_ylabel("Axe météo 2")
-    ax.set_title("Projection météo des cellules")
+    fig, ax = plt.subplots(figsize=(7,6))
+    scatter = ax.scatter(proj[:,0], proj[:,1], c=y, cmap='coolwarm', alpha=0.6)
+    ax.set_xlabel("Composante 1")
+    ax.set_ylabel("Composante 2")
+    ax.set_title("Projection PCA (2D)")
     st.pyplot(fig)
-
-elif viz_choice == "Carte d’importance des variables":
-    importances = rf.feature_importances_[:10]
-    fig, ax = plt.subplots()
-    ax.barh(features_to_use, importances, color='skyblue')
-    ax.set_xlabel("Impact météo")
-    ax.set_title("Top 10 des variables influençant le climat cellulaire")
-    st.pyplot(fig)
-
-# ======================
-# 🌈 MESSAGE FINAL
-# ======================
-st.markdown("---")
-if proba_rf > 0.7:
-    st.error("🌪️ **Alerte météo : vigilance rouge** – fortes probabilités de malignité.")
-elif proba_rf > 0.4:
-    st.warning("⛅️ **Vigilance orange** – risque modéré, à surveiller.")
-else:
-    st.success("☀️ **Ciel dégagé** – conditions bénignes confirmées.")
-
-st.caption("Projet éducatif — Ne remplace pas un diagnostic médical. Réalisé avec ❤️ en Python, scikit-learn et Streamlit.")
-
